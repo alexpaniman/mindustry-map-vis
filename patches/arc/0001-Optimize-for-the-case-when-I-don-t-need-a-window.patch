@@ -12,14 +12,13 @@ index 1e2cb6b8..00c26e6b 100644
 --- a/Arc/backends/backend-sdl/src/arc/backend/sdl/SdlApplication.java
 +++ b/Arc/backends/backend-sdl/src/arc/backend/sdl/SdlApplication.java
 @@ -215,7 +215,7 @@ public class SdlApplication implements Application{
- 
+
              runnables.run();
- 
+
 -            SDL_GL_SwapWindow(window);
 +            // SDL_GL_SwapWindow(window);
              input.postUpdate();
          }
      }
--- 
+--
 2.47.2
-

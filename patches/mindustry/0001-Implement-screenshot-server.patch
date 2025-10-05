@@ -17,7 +17,7 @@ index 5866c47a2..f4e9c3e16 100644
 --- a/Mindustry/core/src/mindustry/ClientLauncher.java
 +++ b/Mindustry/core/src/mindustry/ClientLauncher.java
 @@ -187,6 +187,12 @@ public abstract class ClientLauncher extends ApplicationCore implements Platform
- 
+
          assets.loadRun("contentinit", ContentLoader.class, () -> content.init(), () -> content.load());
          assets.loadRun("baseparts", BaseRegistry.class, () -> {}, () -> bases.load());
 +
@@ -27,10 +27,10 @@ index 5866c47a2..f4e9c3e16 100644
 +            throw new RuntimeException(e);
 +        }
      }
- 
+
      @Override
 @@ -228,7 +234,7 @@ public abstract class ClientLauncher extends ApplicationCore implements Platform
- 
+
          if(!finished){
              if(loader != null){
 -                loader.draw();
@@ -44,19 +44,19 @@ index 87a0abd99..cd793178d 100644
 +++ b/Mindustry/core/src/mindustry/core/Control.java
 @@ -711,7 +711,7 @@ public class Control implements ApplicationListener, Loadable{
              }
- 
+
              if(!mobile && Core.input.keyTap(Binding.screenshot) && !scene.hasField() && !scene.hasKeyboard()){
 -                renderer.takeMapScreenshot();
 +                // renderer.takeMapScreenshot();
              }
- 
+
          }else{
 diff --git a/Mindustry/core/src/mindustry/core/Renderer.java b/Mindustry/core/src/mindustry/core/Renderer.java
 index b4e189f61..e296afd9b 100644
 --- a/Mindustry/core/src/mindustry/core/Renderer.java
 +++ b/Mindustry/core/src/mindustry/core/Renderer.java
 @@ -151,6 +151,9 @@ public class Renderer implements ApplicationListener{
- 
+
      @Override
      public void update(){
 +        if (true)
@@ -64,27 +64,27 @@ index b4e189f61..e296afd9b 100644
 +
          PerfCounter.render.begin();
          Color.white.set(1f, 1f, 1f, 1f);
- 
+
 @@ -587,13 +590,13 @@ public class Renderer implements ApplicationListener{
          landCore.beginLaunch(true);
      }
- 
+
 -    public void takeMapScreenshot(){
 +    public Pixmap takeMapScreenshot(){
          int w = world.width() * tilesize, h = world.height() * tilesize;
          int memory = w * h * 4 / 1024 / 1024;
- 
+
          if(Vars.checkScreenshotMemory && memory >= (mobile ? 65 : 120)){
              ui.showInfo("@screenshot.invalid");
 -            return;
 +            return null;
          }
- 
+
          FrameBuffer buffer = new FrameBuffer(w, h);
 @@ -617,17 +620,14 @@ public class Renderer implements ApplicationListener{
          drawWeather = true;
          buffer.dispose();
- 
+
 -        Threads.thread(() -> {
 -            for(int i = 0; i < lines.length; i += 4){
 -                lines[i + 3] = (byte)255;
@@ -105,7 +105,7 @@ index b4e189f61..e296afd9b 100644
 +
 +        return fullPixmap;
      }
- 
+
      public static class EnvRenderer{
 diff --git a/Mindustry/core/src/mindustry/core/ScreenshotServer.java b/Mindustry/core/src/mindustry/core/ScreenshotServer.java
 new file mode 100644
@@ -222,13 +222,12 @@ index 84eb1d70b..bed70513a 100644
 +++ b/Mindustry/core/src/mindustry/core/UI.java
 @@ -159,7 +159,7 @@ public class UI implements ApplicationListener, Loadable{
          Events.fire(Trigger.uiDrawBegin);
- 
+
          Core.scene.act();
 -        Core.scene.draw();
 +        // Core.scene.draw();
- 
+
          if(Core.input.keyTap(KeyCode.mouseLeft) && Core.scene.hasField()){
              Element e = Core.scene.getHoverElement();
--- 
+--
 2.47.2
-
