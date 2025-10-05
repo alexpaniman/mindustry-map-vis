@@ -22,8 +22,8 @@
           #!${pkgs.runtimeShell}
           export XDG_RUNTIME_DIR=/tmp/
           export DISPLAY=:99
-          xdummy "$DISPLAY" &
-          ${patched-mindustry}/bin/mindustry
+          xdummy "$DISPLAY" &> /tmp/xdummy.log &
+          ${patched-mindustry}/bin/mindustry &> /tmp/mindustry.log
         '';
       in
       {
