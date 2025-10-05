@@ -1,0 +1,25 @@
+From a29bc6625e9e17338ffade87724cf7cdcf13bc9d Mon Sep 17 00:00:00 2001
+From: alexpaniman <alexpaniman@gmail.com>
+Date: Mon, 29 Sep 2025 06:25:11 +0300
+Subject: [PATCH] Optimize for the case when I don't need a window
+
+---
+ Arc/backends/backend-sdl/src/arc/backend/sdl/SdlApplication.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Arc/backends/backend-sdl/src/arc/backend/sdl/SdlApplication.java b/Arc/backends/backend-sdl/src/arc/backend/sdl/SdlApplication.java
+index 1e2cb6b8..00c26e6b 100644
+--- a/Arc/backends/backend-sdl/src/arc/backend/sdl/SdlApplication.java
++++ b/Arc/backends/backend-sdl/src/arc/backend/sdl/SdlApplication.java
+@@ -215,7 +215,7 @@ public class SdlApplication implements Application{
+ 
+             runnables.run();
+ 
+-            SDL_GL_SwapWindow(window);
++            // SDL_GL_SwapWindow(window);
+             input.postUpdate();
+         }
+     }
+-- 
+2.47.2
+

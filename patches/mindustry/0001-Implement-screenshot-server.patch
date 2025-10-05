@@ -1,0 +1,234 @@
+From 1eb48b5499327edfd408551946abf6a031064c08 Mon Sep 17 00:00:00 2001
+From: alexpaniman <alexpaniman@gmail.com>
+Date: Mon, 29 Sep 2025 06:23:02 +0300
+Subject: [PATCH 2/2] Implement screenshot server
+
+---
+ Mindustry/core/src/mindustry/ClientLauncher.java        |   8 +-
+ Mindustry/core/src/mindustry/core/Control.java          |   2 +-
+ Mindustry/core/src/mindustry/core/Renderer.java         |  26 ++---
+ Mindustry/core/src/mindustry/core/ScreenshotServer.java | 103 ++++++++++++++++++
+ Mindustry/core/src/mindustry/core/UI.java               |   2 +-
+ 5 files changed, 125 insertions(+), 16 deletions(-)
+ create mode 100644 Mindustry/core/src/mindustry/core/ScreenshotServer.java
+
+diff --git a/Mindustry/core/src/mindustry/ClientLauncher.java b/Mindustry/core/src/mindustry/ClientLauncher.java
+index 5866c47a2..f4e9c3e16 100644
+--- a/Mindustry/core/src/mindustry/ClientLauncher.java
++++ b/Mindustry/core/src/mindustry/ClientLauncher.java
+@@ -187,6 +187,12 @@ public abstract class ClientLauncher extends ApplicationCore implements Platform
+ 
+         assets.loadRun("contentinit", ContentLoader.class, () -> content.init(), () -> content.load());
+         assets.loadRun("baseparts", BaseRegistry.class, () -> {}, () -> bases.load());
++
++        try {
++            ScreenshotServer.init();
++        } catch (Exception e) {
++            throw new RuntimeException(e);
++        }
+     }
+ 
+     @Override
+@@ -228,7 +234,7 @@ public abstract class ClientLauncher extends ApplicationCore implements Platform
+ 
+         if(!finished){
+             if(loader != null){
+-                loader.draw();
++                // loader.draw();
+             }
+             if(assets.update(1000 / loadingFPS)){
+                 loader.dispose();
+diff --git a/Mindustry/core/src/mindustry/core/Control.java b/Mindustry/core/src/mindustry/core/Control.java
+index 87a0abd99..cd793178d 100644
+--- a/Mindustry/core/src/mindustry/core/Control.java
++++ b/Mindustry/core/src/mindustry/core/Control.java
+@@ -711,7 +711,7 @@ public class Control implements ApplicationListener, Loadable{
+             }
+ 
+             if(!mobile && Core.input.keyTap(Binding.screenshot) && !scene.hasField() && !scene.hasKeyboard()){
+-                renderer.takeMapScreenshot();
++                // renderer.takeMapScreenshot();
+             }
+ 
+         }else{
+diff --git a/Mindustry/core/src/mindustry/core/Renderer.java b/Mindustry/core/src/mindustry/core/Renderer.java
+index b4e189f61..e296afd9b 100644
+--- a/Mindustry/core/src/mindustry/core/Renderer.java
++++ b/Mindustry/core/src/mindustry/core/Renderer.java
+@@ -151,6 +151,9 @@ public class Renderer implements ApplicationListener{
+ 
+     @Override
+     public void update(){
++        if (true)
++            return;
++
+         PerfCounter.render.begin();
+         Color.white.set(1f, 1f, 1f, 1f);
+ 
+@@ -587,13 +590,13 @@ public class Renderer implements ApplicationListener{
+         landCore.beginLaunch(true);
+     }
+ 
+-    public void takeMapScreenshot(){
++    public Pixmap takeMapScreenshot(){
+         int w = world.width() * tilesize, h = world.height() * tilesize;
+         int memory = w * h * 4 / 1024 / 1024;
+ 
+         if(Vars.checkScreenshotMemory && memory >= (mobile ? 65 : 120)){
+             ui.showInfo("@screenshot.invalid");
+-            return;
++            return null;
+         }
+ 
+         FrameBuffer buffer = new FrameBuffer(w, h);
+@@ -617,17 +620,14 @@ public class Renderer implements ApplicationListener{
+         drawWeather = true;
+         buffer.dispose();
+ 
+-        Threads.thread(() -> {
+-            for(int i = 0; i < lines.length; i += 4){
+-                lines[i + 3] = (byte)255;
+-            }
+-            Pixmap fullPixmap = new Pixmap(w, h);
+-            Buffers.copy(lines, 0, fullPixmap.pixels, lines.length);
+-            Fi file = screenshotDirectory.child("screenshot-" + Time.millis() + ".png");
+-            PixmapIO.writePng(file, fullPixmap);
+-            fullPixmap.dispose();
+-            app.post(() -> ui.showInfoFade(bundle.format("screenshot", file.toString())));
+-        });
++        for(int i = 0; i < lines.length; i += 4){
++            lines[i + 3] = (byte)255;
++        }
++
++        Pixmap fullPixmap = new Pixmap(w, h);
++        Buffers.copy(lines, 0, fullPixmap.pixels, lines.length);
++
++        return fullPixmap;
+     }
+ 
+     public static class EnvRenderer{
+diff --git a/Mindustry/core/src/mindustry/core/ScreenshotServer.java b/Mindustry/core/src/mindustry/core/ScreenshotServer.java
+new file mode 100644
+index 000000000..fb2cac1d2
+--- /dev/null
++++ b/Mindustry/core/src/mindustry/core/ScreenshotServer.java
+@@ -0,0 +1,103 @@
++package mindustry.core;
++
++import arc.Core;
++import arc.graphics.Pixmap;
++import arc.graphics.PixmapIO;
++import arc.util.ArcRuntimeException;
++import arc.util.Log;
++import com.sun.net.httpserver.HttpServer;
++import com.sun.net.httpserver.HttpHandler;
++import com.sun.net.httpserver.HttpExchange;
++import mindustry.io.SaveIO;
++
++import java.io.*;
++import java.net.InetSocketAddress;
++import java.util.zip.InflaterInputStream;
++
++import static mindustry.Vars.*;
++
++public class ScreenshotServer {
++    public static void init() throws Exception {
++        Thread serverThread = new Thread(() -> {
++            try {
++                HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
++                server.createContext("/screenshot", new FileHandler());
++                server.setExecutor(null); // default executor
++                server.start();
++                Log.info("[Server] Started screenshot server on http://localhost:8080/screenshot");
++            } catch (IOException e) {
++                throw new RuntimeException(e);
++            }
++        });
++
++        serverThread.start();
++    }
++
++    static class FileHandler implements HttpHandler {
++        @Override
++        public void handle(HttpExchange exchange) throws IOException {
++            if ("POST".equals(exchange.getRequestMethod())) {
++                // 1. Read input file from request body
++                ByteArrayOutputStream uploaded = new ByteArrayOutputStream();
++                // exchange.getRequestBody().transferTo(uploaded);
++
++                InputStream in = exchange.getRequestBody();
++                byte[] buffer = new byte[8192];
++                int bytesRead;
++                while ((bytesRead = in.read(buffer)) != -1) {
++                    uploaded.write(buffer, 0, bytesRead);
++                }
++
++                InputStream uploadedIS = new ByteArrayInputStream(uploaded.toByteArray());
++
++                while (!Core.assets.isFinished()) {
++                    try {
++                        Thread.sleep(50);
++                    } catch (InterruptedException e) {
++                        throw new RuntimeException(e);
++                    }
++                }
++
++                Core.app.post(() -> {
++                    SaveIO.load(new InflaterInputStream(uploadedIS), world.context);
++                    state.rules.sector = null;
++                    state.set(GameState.State.paused);
++
++                    Pixmap pixmap = renderer.takeMapScreenshot();
++
++                    ByteArrayOutputStream image = new ByteArrayOutputStream();
++                    writePng(image, pixmap);
++
++                    byte[] result = image.toByteArray();
++
++                    // Send image back
++                    try {
++                        exchange.getResponseHeaders().set("Content-Type", "application/octet-stream");
++                        exchange.sendResponseHeaders(200, result.length);
++                        try (OutputStream os = exchange.getResponseBody()) {
++                            os.write(result);
++                        }
++                    } catch (IOException e) {
++                        throw new RuntimeException(e);
++                    }
++                });
++            } else {
++                exchange.sendResponseHeaders(405, -1); // method not allowed
++            }
++        }
++    }
++
++    public static void writePng(OutputStream os, Pixmap pixmap){
++        try {
++            PixmapIO.PngWriter writer = new PixmapIO.PngWriter((int)(pixmap.width * pixmap.height * 1.5f)); // Guess at deflated size.
++            try {
++                writer.setFlipY(false);
++                writer.write(os, pixmap);
++            } finally {
++                writer.dispose();
++            }
++        } catch(IOException ex) {
++            throw new ArcRuntimeException("Error writing PNG: ", ex);
++        }
++    }
++}
+diff --git a/Mindustry/core/src/mindustry/core/UI.java b/Mindustry/core/src/mindustry/core/UI.java
+index 84eb1d70b..bed70513a 100644
+--- a/Mindustry/core/src/mindustry/core/UI.java
++++ b/Mindustry/core/src/mindustry/core/UI.java
+@@ -159,7 +159,7 @@ public class UI implements ApplicationListener, Loadable{
+         Events.fire(Trigger.uiDrawBegin);
+ 
+         Core.scene.act();
+-        Core.scene.draw();
++        // Core.scene.draw();
+ 
+         if(Core.input.keyTap(KeyCode.mouseLeft) && Core.scene.hasField()){
+             Element e = Core.scene.getHoverElement();
+-- 
+2.47.2
+
