@@ -6,7 +6,7 @@ You can use the tool locally, but I recommend to launch it inside a docker conta
 MESA LLVMpipe for OpenGL renderning so that it doesn't require a GPU and can be used headless on a
 CPU-only server.
 
-Only supported way to build this is using =Nix=. If you don't have nix already, check out
+Only supported way to build this is using [[https://github.com/NixOS/nix][Nix]]. If you don't have nix already, check out
 https://github.com/DeterminateSystems/nix-installer.
 
 #+begin_src sh
@@ -14,20 +14,20 @@ nix build github:alexpaniman/mindustry-map-vis#docker
 docker load < result | awk '/Loaded image:/ { print $3 }' | xargs -I {} docker run -p 8080:8080 {}
 #+end_src
 
-It will start on 8080 port and you can interact with with via HTTP request:
+It will start on =8080= port and you can interact with with via HTTP request:
 #+begin_src
 POST {base_url}/screenshot
 #+end_src
 
 - ={base_url}= --- base URL of the server. (defaults to http://0.0.0.0:8080)
 
-*Request Body (multipart/form-data):*
-- file --- the msav file for which the screenshot will be generated.
+*Request Body:*
+- =file= --- the msav file for which the screenshot will be generated.
 
 *Response:*
-- 200 OK --- returns the generated screenshot image.
-- Content-Type: image/png
-- 400 Bad Request --- if no file is provided or the file type is unsupported.
+- =200 OK= --- returns the generated screenshot image.
+- =Content-Type: image/png=
+- =400 Bad Request= --- if no file is provided or the file type is unsupported.
 
 For example, if you have msav file of one of the default maps: Shattered.msav, than you can do:
 #+begin_src sh
