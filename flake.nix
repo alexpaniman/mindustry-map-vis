@@ -11,31 +11,31 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        patched-mindustry = pkgs.mindustry.overrideAttrs (old: {
+        mindustry-map-vis = pkgs.mindustry.overrideAttrs (old: {
           patches = [
             ./patches/mindustry/0001-Implement-screenshot-server.patch
             ./patches/arc/0001-Optimize-for-the-case-when-I-don-t-need-a-window.patch
           ];
         });
 
-        run-mindustry = pkgs.writeScriptBin "run-mindustry" ''
+        run-mindustry-map-vis = pkgs.writeScriptBin "run-mindustry-map-vis" ''
           #!${pkgs.runtimeShell}
           export XDG_RUNTIME_DIR=/tmp/
           export DISPLAY=:99
           xdummy "$DISPLAY" &> /tmp/xdummy.log &
-          ${patched-mindustry}/bin/mindustry
+          ${mindustry-map-vis}/bin/mindustry
         '';
       in
       {
         packages = {
-          default = patched-mindustry;
+          default = mindustry-map-vis;
 
           docker = pkgs.dockerTools.buildImage {
-            name = "mindustry-dockerized";
+            name = "mindustry-map-vis-dockerized";
             tag = "latest";
   
             copyToRoot = with pkgs; [
-              patched-mindustry
+              mindustry-map-vis
               mesa
 
               bash
@@ -53,7 +53,7 @@
             '';
 
             config = {
-              Cmd = [ "${run-mindustry}/bin/run-mindustry" ];
+              Cmd = [ "${run-mindustry-map-vis}/bin/run-mindustry-map-vis" ];
             };
           };
         };
