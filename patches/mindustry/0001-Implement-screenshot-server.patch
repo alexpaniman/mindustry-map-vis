@@ -7,9 +7,9 @@ Subject: [PATCH 2/2] Implement screenshot server
  Mindustry/core/src/mindustry/ClientLauncher.java        |   8 +-
  Mindustry/core/src/mindustry/core/Control.java          |   2 +-
  Mindustry/core/src/mindustry/core/Renderer.java         |  26 ++---
- Mindustry/core/src/mindustry/core/ScreenshotServer.java | 103 ++++++++++++++++++
+ Mindustry/core/src/mindustry/core/ScreenshotServer.java | 105 ++++++++++++++++++
  Mindustry/core/src/mindustry/core/UI.java               |   2 +-
- 5 files changed, 125 insertions(+), 16 deletions(-)
+ 5 files changed, 127 insertions(+), 16 deletions(-)
  create mode 100644 Mindustry/core/src/mindustry/core/ScreenshotServer.java
 
 diff --git a/Mindustry/core/src/mindustry/ClientLauncher.java b/Mindustry/core/src/mindustry/ClientLauncher.java
@@ -112,7 +112,7 @@ new file mode 100644
 index 000000000..fb2cac1d2
 --- /dev/null
 +++ b/Mindustry/core/src/mindustry/core/ScreenshotServer.java
-@@ -0,0 +1,103 @@
+@@ -0,0 +1,105 @@
 +package mindustry.core;
 +
 +import arc.Core;
@@ -140,6 +140,8 @@ index 000000000..fb2cac1d2
 +                server.setExecutor(null); // default executor
 +                server.start();
 +                Log.info("[Server] Started screenshot server on http://localhost:8080/screenshot");
++
++                Runtime.getRuntime().addShutdownHook(new Thread(() -> { server.stop(0); }));
 +            } catch (IOException e) {
 +                throw new RuntimeException(e);
 +            }
